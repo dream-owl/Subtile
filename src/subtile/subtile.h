@@ -71,7 +71,7 @@ public:
     void parse(stRequest const& request);
 
     void visit(stVisitor& visitor);
-    void visit(stVisitor& visitor, stTransform const& transform);
+    void visit(stVisitor& visitor, stBounds const& bounds);
 
     stPackage const* step();
     stPackage const* pack();

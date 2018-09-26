@@ -269,7 +269,7 @@ int main()
         while(ui.step())
         {
             stSubtileMesh mesh;
-            os.visit(mesh);
+            os.visit(mesh, stBounds(0, -2.0f, -2.0f, 0, 2.0f, 2.0f));;
             ui.draw(mesh);
         }
     }

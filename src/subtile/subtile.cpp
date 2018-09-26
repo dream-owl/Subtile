@@ -28,12 +28,14 @@ struct stSubtile::stTile
 struct stSubtile::stIsland
 {
     stIsland()=default;
-    stIsland(int32_t x, int32_t y, int32_t z) : xyz{ x, y, z } , life(stSettings::LifetimeIsland) , tiles(0) {}
+    stIsland(int32_t x, int32_t y, int32_t z) : xyz{ x, y, z } , life(stSettings::LifetimeIsland) , tiles(0) ,
+                                                bounds(z, x, y, z, x + stSettings::SizeIsland, y + stSettings::SizeIsland) {}
 
     int32_t xyz[3];
     int32_t life;
     uint8_t tiles;
     stTile storage[stSettings::StorageIsland];
+    stBounds bounds;
 };
 
 stSubtile::stSubtile(std::string const& guid) : m_guid(guid) , m_directory(guid + '/') , m_materialsPool(stSettings::PoolMaterial) ,
@@ -94,9 +96,27 @@ void stSubtile::visit(stVisitor& visitor)
     }
 }
 
-void stSubtile::visit(stVisitor& visitor, stTransform const& transform)
+void stSubtile::visit(stVisitor& visitor, stBounds const& bounds)
 {
+    for(stIsland* island : m_islands)
+    {
+        if(island->bounds.test(bounds))
+        {
+            stTransform transform;
+            transform.altitude = island->xyz[2];
 
+            for(uint8_t i = 0; i < island->tiles; i++)
+            {
+                if(bounds.test(island->storage[i].position))
+                {
+                    transform.position = island->storage[i].position;
+                    transform.rotation = island->storage[i].rotation;
+
+                    visitor.onTile(transform, *material(island->storage[i].material), *behavior(island->storage[i].behavior));
+                }
+            }
+        }
+    }
 }
 
 stPackage const* stSubtile::step()

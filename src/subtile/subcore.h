@@ -120,6 +120,30 @@ public:
     stRadians rotation;
 };
 
+class stBounds
+{
+public:
+    stBounds()=default;
+    stBounds(int32_t lowerA, float lowerX, float lowerY, int32_t upperA, float upperX, float upperY) : lowerAltitude(lowerA) , upperAltitude(upperA) ,
+                                                                                                       lower(lowerX, lowerY) , upper(upperX, upperY) {}
+
+    bool test(stVector const& vector) const {
+        return (vector.x >= lower.x) && (vector.x <= upper.x) && (vector.y >= lower.y) && (vector.y <= upper.y);
+    }
+
+    bool test(stBounds const& bounds) const {
+        return (lowerAltitude <= bounds.upperAltitude) &&
+               (upperAltitude >= bounds.lowerAltitude) &&
+               (lower.x <= bounds.upper.x) && (lower.y <= bounds.upper.y) &&
+               (upper.x >= bounds.lower.x) && (upper.y >= bounds.lower.y);
+    }
+
+    int32_t lowerAltitude;
+    int32_t upperAltitude;
+    stVector lower;
+    stVector upper;
+};
+
 class stPackage
 {
 public:
