@@ -127,9 +127,9 @@ private:
 class stSubtileMesh : public stMesh , public stVisitor
 {
 public:
-    void onTile(stTransform const& transform, stMaterial const& material, stBehavior const& behavior) override
+    void onTile(stLocation const& location, stMaterial const& material, stBehavior const& behavior) override
     {
-        line(transform.position, stVector(transform.position.x + 0.5f, transform.position.y + 0.5f));
+        line(location.position, stVector(location.position.x + 0.5f, location.position.y + 0.5f));
     }
 };
 
@@ -150,7 +150,8 @@ void stMesh::line(stVector const& origin, stVector const& target)
 
 void stMesh::rect(stVector const& center, stVector const& radius)
 {
-
+    stVector const lower = center - radius;
+    stVector const upper = center + radius;
 }
 
 stUI::stUI() : m_screen(1024.0f, 768.0f) , m_cursor(0.0f) , m_delta(0.0f) , m_stamp(0.0f)
@@ -264,12 +265,12 @@ int main()
     {
         stUI ui;
         stSubtile os("universe");
-        os.parse(stRequest(0, 2.0f, -1.0f, 1.0f));
+        os.parse(stRequest(0, 2.0f, -1.0f));
 
         while(ui.step())
         {
             stSubtileMesh mesh;
-            os.visit(mesh, stBounds(0, -2.0f, -2.0f, 0, 2.0f, 2.0f));;
+            os.visit(mesh, stBounds(stLocation(0, -2.0f, -2.0f), stLocation(0, 2.0f, 2.0f)));
             ui.draw(mesh);
         }
     }

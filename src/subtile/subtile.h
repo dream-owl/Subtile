@@ -45,9 +45,9 @@ class stRequest
 {
 public:
     stRequest()=default;
-    stRequest(int32_t altitude, float x, float y, float r) : transform(altitude, x, y, r) , material("blank") , behavior() {}
+    stRequest(int32_t altitude, float x, float y) : location(altitude, x, y) , material("blank") , behavior() {}
 
-    stTransform transform;
+    stLocation location;
     stMaterial material;
     stBehavior behavior;
 };
@@ -58,7 +58,7 @@ public:
     virtual ~stVisitor() {}
     virtual void onMaterial(stMaterial const& material) {}
     virtual void onBehavior(stBehavior const& behavior) {}
-    virtual void onTile(stTransform const& transform, stMaterial const& material, stBehavior const& behavior) {}
+    virtual void onTile(stLocation const& transform, stMaterial const& material, stBehavior const& behavior) {}
 };
 
 class stSubtile

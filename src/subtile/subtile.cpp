@@ -17,10 +17,9 @@ stMaterial::stMaterial(stLabel const& label) : label(label)
 struct stSubtile::stTile
 {
     stTile()=default;
-    stTile(float x, float y, float r, int16_t m = 0, int16_t b = 0) : rotation(r) , position(x, y) , material(m) , behavior(b) {}
+    stTile(int32_t altitude, float x, float y, int16_t m = 0, int16_t b = 0) : location(altitude, x, y) , material(m) , behavior(b) {}
 
-    stRadians rotation;
-    stVector position;
+    stLocation location;
     int16_t material;
     int16_t behavior;
 };
@@ -29,7 +28,7 @@ struct stSubtile::stIsland
 {
     stIsland()=default;
     stIsland(int32_t x, int32_t y, int32_t z) : xyz{ x, y, z } , life(stSettings::LifetimeIsland) , tiles(0) ,
-                                                bounds(z, x, y, z, x + stSettings::SizeIsland, y + stSettings::SizeIsland) {}
+                                                bounds(stLocation(z, x, y), stLocation(z, x + stSettings::SizeIsland, y + stSettings::SizeIsland)) {}
 
     int32_t xyz[3];
     int32_t life;
@@ -72,8 +71,8 @@ void stSubtile::parse(stRequest const& request)
     if(materialHandle == 0)
         material(materialHandle, true) = request.material;
 
-    stIsland* const islandPointer = island(request.transform.altitude, request.transform.position.x, request.transform.position.y);
-    islandPointer->storage[islandPointer->tiles++] = stTile(request.transform.position.x, request.transform.position.y, request.transform.rotation.a, materialHandle, behaviorHandle);
+    stIsland* const islandPointer = island(request.location.altitude, request.location.position.x, request.location.position.y);
+    islandPointer->storage[islandPointer->tiles++] = stTile(request.location.altitude, request.location.position.x, request.location.position.y, materialHandle, behaviorHandle);
 }
 
 void stSubtile::visit(stVisitor& visitor)
@@ -83,15 +82,13 @@ void stSubtile::visit(stVisitor& visitor)
 
     for(stIsland* island : m_islands)
     {
-        stTransform transform;
-        transform.altitude = island->xyz[2];
+        stLocation location;
+        location.altitude = island->xyz[2];
 
         for(uint8_t i = 0; i < island->tiles; i++)
         {
-            transform.position = island->storage[i].position;
-            transform.rotation = island->storage[i].rotation;
-
-            visitor.onTile(transform, *material(island->storage[i].material), *behavior(island->storage[i].behavior));
+            location.position = island->storage[i].location.position;
+            visitor.onTile(location, *material(island->storage[i].material), *behavior(island->storage[i].behavior));
         }
     }
 }
@@ -100,19 +97,17 @@ void stSubtile::visit(stVisitor& visitor, stBounds const& bounds)
 {
     for(stIsland* island : m_islands)
     {
-        if(island->bounds.test(bounds))
+        if(bounds.overlaps(island->bounds))
         {
-            stTransform transform;
-            transform.altitude = island->xyz[2];
+            stLocation location;
+            location.altitude = island->xyz[2];
 
             for(uint8_t i = 0; i < island->tiles; i++)
             {
-                if(bounds.test(island->storage[i].position))
+                if(bounds.overlaps(island->storage[i].location))
                 {
-                    transform.position = island->storage[i].position;
-                    transform.rotation = island->storage[i].rotation;
-
-                    visitor.onTile(transform, *material(island->storage[i].material), *behavior(island->storage[i].behavior));
+                    location.position = island->storage[i].location.position;
+                    visitor.onTile(location, *material(island->storage[i].material), *behavior(island->storage[i].behavior));
                 }
             }
         }

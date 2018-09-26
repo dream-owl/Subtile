@@ -3,7 +3,7 @@
 
 #include "subcore.h"
 
-class stMesh
+class stMesh //debug only, proper implementation (particle effects and blended lighting) will be implemented on separate  client
 {
 public:
     void reset();

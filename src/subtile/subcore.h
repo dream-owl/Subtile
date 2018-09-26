@@ -68,7 +68,7 @@ public:
 class stLabel
 {
 public:
-    stLabel() : m_data { '\0' } {}
+    stLabel() : m_data { '\n' } {}
 
     stLabel(std::string_view const& stringView) {
         assert(stringView.size() < stSettings::StorageLabel);
@@ -96,52 +96,51 @@ public:
     stVector(float x) : x(x) , y(x) {}
     stVector(float x, float y) : x(x) , y(y) {}
 
+    stVector operator - (stVector const& right) const { return stVector(x - right.x, y - right.y); }
+    stVector operator + (stVector const& right) const { return stVector(x + right.x, y + right.y); }
+
     float x;
     float y;
 };
 
-class stRadians
+class stLocation
 {
 public:
-    stRadians()=default;
-    stRadians(float a) : a(a) {}
-
-    float a;
-};
-
-class stTransform
-{
-public:
-    stTransform()=default;
-    stTransform(int32_t a, float x, float y, float radians) : altitude(a) , position(x, y) , rotation(radians) {}
+    stLocation()=default;
+    stLocation(int32_t a, float x, float y) : altitude(a) , position(x, y) {}
 
     int32_t altitude;
     stVector position;
-    stRadians rotation;
+};
+
+class stRotation
+{
+public:
+    stRotation()=default;
+    stRotation(float radians) : a(radians) {}
+
+    float a;
 };
 
 class stBounds
 {
 public:
     stBounds()=default;
-    stBounds(int32_t lowerA, float lowerX, float lowerY, int32_t upperA, float upperX, float upperY) : lowerAltitude(lowerA) , upperAltitude(upperA) ,
-                                                                                                       lower(lowerX, lowerY) , upper(upperX, upperY) {}
+    stBounds(stLocation const& lower, stLocation const& upper) : lower(lower) , upper(upper) {}
 
-    bool test(stVector const& vector) const {
-        return (vector.x >= lower.x) && (vector.x <= upper.x) && (vector.y >= lower.y) && (vector.y <= upper.y);
+    bool overlaps(stLocation const& location) const {
+        return (location.position.x >= lower.position.x) && (location.position.x <= upper.position.x) &&
+               (location.position.y >= lower.position.y) && (location.position.y <= upper.position.y);
     }
 
-    bool test(stBounds const& bounds) const {
-        return (lowerAltitude <= bounds.upperAltitude) &&
-               (upperAltitude >= bounds.lowerAltitude) &&
-               (lower.x <= bounds.upper.x) && (lower.y <= bounds.upper.y) &&
-               (upper.x >= bounds.lower.x) && (upper.y >= bounds.lower.y);
+    bool overlaps(stBounds const& bounds) const {
+        return (lower.altitude <= bounds.upper.altitude) && (upper.altitude >= bounds.lower.altitude) &&
+               (lower.position.x <= bounds.upper.position.x) && (lower.position.y <= bounds.upper.position.y) &&
+               (upper.position.x >= bounds.lower.position.x) && (upper.position.y >= bounds.lower.position.y);
     }
 
-    int32_t lowerAltitude;
-    int32_t upperAltitude;
-    stVector lower;
-    stVector upper;
+    stLocation lower;
+    stLocation upper;
 };
 
 class stPackage
