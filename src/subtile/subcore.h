@@ -68,7 +68,7 @@ public:
 class stLabel
 {
 public:
-    stLabel() : m_data { '\n' } {}
+    stLabel() : m_data { '\0' } {}
 
     stLabel(std::string_view const& stringView) {
         assert(stringView.size() < stSettings::StorageLabel);
