@@ -47,6 +47,8 @@ private:
 
     std::array<bool, 128> m_keys;
     std::array<bool, 3> m_buttons;
+
+    std::unique_ptr<class stGraphics> m_graphics;
 };
 
 #endif // SUBTILE_SUBUI_H

@@ -6,6 +6,133 @@
 
 #include <glfw/glfw3.h>
 
+class stGraphics
+{
+public:
+    stGraphics(stGraphics const&) = delete;
+    stGraphics()
+    {
+        static char const* const VertexSource = {
+            "#version 330\n"
+            "uniform mat4 uProjection;"
+            "in vec2 iPosition;"
+            "in vec2 iTexCoord;"
+            "out vec2 vTexCoord;"
+            "void main() {"
+            "   vTexCoord = iTexCoord;"
+            "   gl_Position = uProjection * vec4(iPosition.xy, 0.0, 1.0);"
+            "}"
+        };
+
+        static char const* const FragmentSource = {
+            "#version 330\n"
+            "in vec2 vTexCoord;"
+            "out vec4 oColor;"
+            "void main() {"
+            "   oColor = vec4(1.0, 0.0, 0.0, 1.0);"
+            "}"
+        };
+
+        glGenVertexArrays(1, &m_vao);
+        glBindVertexArray(m_vao);
+
+        glGenBuffers(1, &m_vbo);
+        glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
+
+        glGenBuffers(1, &m_ibo);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ibo);
+
+        glBindVertexArray(0);
+
+        m_vertex = glCreateShader(GL_VERTEX_SHADER);
+        glShaderSource(m_vertex, 1, &VertexSource, nullptr);
+        glCompileShader(m_vertex);
+
+        m_fragment = glCreateShader(GL_FRAGMENT_SHADER);
+        glShaderSource(m_fragment, 1, &FragmentSource, nullptr);
+        glCompileShader(m_fragment);
+
+        m_program = glCreateProgram();
+        glAttachShader(m_program, m_vertex);
+        glAttachShader(m_program, m_fragment);
+
+        glBindAttribLocation(m_program, 0, "iPosition");
+        glBindAttribLocation(m_program, 1, "iTexCoord");
+
+        glBindFragDataLocation(m_program, 0, "oColor");
+
+        glLinkProgram(m_program);
+        glUseProgram(m_program);
+
+        m_projectionUniform = glGetUniformLocation(m_program, "uProjection");
+
+        glUseProgram(0);
+    }
+
+    void draw(stMesh const& mesh)
+    {
+        glUseProgram(m_program);
+        glUniformMatrix4fv(m_projectionUniform, 1, GL_FALSE, m_projectionMatrix);
+
+        glBindVertexArray(m_vao);
+
+        glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(stVector) * mesh.vertices().size(), mesh.vertices().data(), GL_STREAM_DRAW);
+
+        glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(stVector), reinterpret_cast<void const*>(0));
+        glEnableVertexAttribArray(0);
+
+        glVertexAttrib2f(1, 1.0f, 1.0f);
+        glDisableVertexAttribArray(1);
+
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ibo);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(uint32_t) * mesh.indices().size(), mesh.indices().data(), GL_STREAM_DRAW);
+
+        glDrawElements(GL_LINES, mesh.indices().size(), GL_UNSIGNED_INT, nullptr);
+
+        glBindVertexArray(0);
+        glUseProgram(0);
+    }
+
+    void ortho(stVector const& center, stVector radius, float aspect)
+    {
+        float const left = center.x - radius.x * aspect;
+        float const right = center.x + radius.x * aspect;
+        float const top = center.y + radius.y;
+        float const bottom = center.y - radius.y;
+
+        std::fill(&m_projectionMatrix[0], &m_projectionMatrix[15], 0.0f);
+
+        m_projectionMatrix[0] = 2.0f / (right - left);
+        m_projectionMatrix[5] = 2.0f / (top - bottom);
+        m_projectionMatrix[10] = -1.0f;
+        m_projectionMatrix[12] = (right + left) / (left - right);
+        m_projectionMatrix[13] = (top + bottom) / (bottom - top);
+        m_projectionMatrix[15] = 1.0f;
+    }
+
+private:
+    uint32_t m_vao;
+    uint32_t m_vbo;
+    uint32_t m_ibo;
+
+    uint32_t m_program;
+    uint32_t m_vertex;
+    uint32_t m_fragment;
+
+    int32_t m_projectionUniform;
+    float m_projectionMatrix[16];
+};
+
+class stSubtileMesh : public stMesh , public stVisitor
+{
+public:
+    void onTile(stTransform const& transform, stMaterial const& material, stBehavior const& behavior) override
+    {
+        line(transform.position, stVector(transform.position.x + 0.5f, transform.position.y + 0.5f));
+    }
+};
+
 void stMesh::reset()
 {
     m_vertices.clear();
@@ -57,6 +184,9 @@ stUI::stUI() : m_screen(1024.0f, 768.0f) , m_cursor(0.0f) , m_delta(0.0f) , m_st
     glCullFace(GL_BACK);
     glFrontFace(GL_CCW);
 
+    m_graphics.reset(new stGraphics());
+    m_graphics->ortho(stVector(0.0f), stVector(5.0f), m_screen.x / m_screen.y);
+
     m_stamp = static_cast<float>(glfwGetTime());
 }
 
@@ -93,7 +223,7 @@ bool stUI::step()
 
 bool stUI::draw(stMesh const& mesh)
 {
-
+    m_graphics->draw(mesh);
 }
 
 bool stUI::press(char code, bool repeat)
@@ -134,13 +264,16 @@ int main()
     {
         stUI ui;
         stSubtile os("universe");
+        os.parse(stRequest(0, 2.0f, -1.0f, 1.0f));
 
         while(ui.step())
         {
-
+            stSubtileMesh mesh;
+            os.visit(mesh);
+            ui.draw(mesh);
         }
     }
-    catch(std::exception catched)
+    catch(std::exception const& catched)
     {
         std::cerr << catched.what() << "\n";
     }
